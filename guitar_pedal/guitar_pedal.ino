@@ -41,9 +41,8 @@ void setup() {
     
   //define pedal pins
   pinMode(pedal_left, INPUT_PULLUP);    //pedal pin states are pulled high as their default state
-  pinMode(pedal_right, INPUT);    //Due to the special nature of pin 2 ("strapping pin" functionality as well as being connected to built-in LED)...
+  pinMode(pedal_right, INPUT_PULLUP);    //Due to the special nature of pin 2 ("strapping pin" functionality as well as being connected to built-in LED)...
                                   //...set this pin to INPUT and use an external pull up resistor.
-  digitalWrite(pedal_right, HIGH);
   //Display feedback
   Serial.begin(115200);
   Serial.println("Starting BLE Guitar Pedal!");
@@ -65,15 +64,15 @@ void loop() {
         pedal_delay = millis();   //record time of pedal release
         Serial.print("RIGHT Released...");
         if(pedal_delay - last_delay >= long_press) {   //check if "long press" threshold has been reached
-          if(playback == 1) {   //Only send STOP command if the track is playing.
-            bleKeyboard.write(48);   //send ASCII code for numeric zero to stop track
-            delay(500);
-            playback = 0;
-            Serial.println("STOP Track");
-          }
+          bleKeyboard.write(48);   //send ASCII code for numeric zero to toggle track to "stop" mode
+          delay(500);
+          playback = 0;
+          Serial.println("STOP Track");
           bleKeyboard.write(217);   //send ASCII code for "Down Arrow" to select next slot within same track
           delay(500);
           new_track = 1;    //Since we are in a new slot within the old track, set "new_track" to 1 (TRUE)
+          bleKeyboard.write(48);   //send ASCII code for numeric zero to toggle track to "play" mode
+          delay(500);
           Serial.println("NEXT SLOT");
         }
         else {    //otherwise if "short press"
@@ -86,6 +85,7 @@ void loop() {
       }
     }
     
+    
     //LEFT PEDAL press
     if(digitalRead(pedal_left) == LOW && record == 0) {    //if pedal pressed while NOT recording
       if(new_track == 1) {
@@ -94,12 +94,22 @@ void loop() {
         bleKeyboard.write(KEY_RETURN);
         delay(1000);
         record = 1;   //set flag that recording is in progress
+        playback = 1;   //Set this flag to "true" while recording to prevent looping re-triggers if pedal held down.
         new_track = 0;    //set flag that the current track is no longer "new"
         Serial.println("RECORDING");
       }
+      else if(new_track == 0) {
+        if(playback == 0) {   //Check "playback" flag to prevent looping re-triggers if pedal is held down after stopping recording.
+          Serial.print("LEFT Pressed...");
+          bleKeyboard.write(KEY_RETURN);
+          delay(1000);
+          playback = 1;
+          Serial.println("RESET");
+        }
+      }
     }
-    else if(digitalRead(pedal_left) == LOW && record == 1) {   //if pedal pressed WHILE recording
-      if(playback == 0) {
+    else if(digitalRead(pedal_left) == LOW && record == 1) {   //if pedal pressed (or held down) WHILE recording
+      if(playback == 0) {   //By checking the "playback" flag, we can be sure to ONLY end recording if the pedal has been released and re-pressed.
         Serial.print("LEFT Pressed...");
         bleKeyboard.write(KEY_RETURN);
         delay(1000);
@@ -108,5 +118,14 @@ void loop() {
         Serial.println("PLAYING");
       }
     }
+    else if(digitalRead(pedal_left) == HIGH) {   //if pedal released at ANY time
+      if(playback == 1) {   //Check if the flag has been set (record mode initiated)
+        Serial.println("LEFT Released...");
+        playback = 0;   //Reset the "playback" flag when the pedal is released. Now recording can be stopped by a second press of the pedal.
+        delay(500);
+      }
+    }
+
+    
   }
 }
