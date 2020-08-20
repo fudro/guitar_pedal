@@ -1,0 +1,9 @@
+PEDAL DIMENSIONS
+Length between Posts:		76.50mm (73.50mm)
+Width between the Post:		41.00mm (38.00mm)
+Diameter of Pole Pins:		3.00mm
+
+ESP32 DIMENSIONS
+Length (Hole Centers):	46.50mm
+Width (Hole Centers):	23.25mm
+Hole Diameter:		3.00mm

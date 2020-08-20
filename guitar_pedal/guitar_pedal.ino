@@ -1,23 +1,26 @@
 /*
  * This program uses the BleKeyboard library to convert the ESP32 into a programmable "bluetooth keyboard".
- * Using buttons connected to IO pins, the ESP32 can be triggered to send keystroke messages
- * (including hot-key combinations) to Ableton Live via bluetooth.
+ * Using buttons connected to IO pins, the ESP32 can be triggered to send bluetooth keystroke messages to Ableton Live.
+ * This program is intended to work within the "Session View" of Ableton.
  * 
  * FUNCTIONALITY:
  * 
  * PRESS TYPE | LEFT PEDAL                    |  RIGHT PEDAL
  * --------------------------------------------------------
  *  Short     | Toggle: Record/Play/Restart   |  Next Track (Right Arrow)
- *  Long      | N/A                           |  Stop Track/Retry Loop
+ *  Long      | N/A                           |  Stop Slot/Retry (auto select next downward slot in same track)
  *  
  *  NOTES: 
- *  "Next Track" will go to the track directly below the current track (equivalent to Down Arrow).
- *  "Record" only activates on first press of a new track.
- *  "Play" activates upon second press in existing track.
- *  "Restart" activates upon all subsequent presses in an existing track.
+ *  "Record" only activates on first press within a newly selected track.
+ *  "Play" activates upon second press within an existing track.
+ *  "Restart" activates upon all subsequent presses within an existing track.
+ *  "Next Track" will go to the track directly to the "right" of the current track (equivalent to Right Arrow).
  *  
- *  REFERENCE FOR KEYCODES
- *  https://www.arduino.cc/reference/en/language/functions/usb/keyboard/keyboardmodifiers/
+ *  REFERENCE:
+ *  Library:  https://github.com/T-vK/ESP32-BLE-Keyboard
+ *  Ableton:  https://www.ableton.com/en/manual/live-keyboard-shortcuts/  (See Section 34.8 Session View Commands)
+ *  Keycodes: https://www.arduino.cc/reference/en/language/functions/usb/keyboard/keyboardmodifiers/
+ *            https://www.arduino.cc/en/Reference/KeyboardModifiers
  */
 #include <BleKeyboard.h>
 
@@ -28,9 +31,9 @@ const int pedal_left = 4;  //Record, Play, or Restart track
 const int pedal_right = 5; //Select or Stop track(Retry)
 int select = 0;  //flag for state of right_pedal used to make track selections (pressed = 1, released = 0)
 int record = 0;  //flag for current state of selected track (recording = 1, not-recording = 0)
-int playback = 0;   //flag for current state of the selected track (stopped = 0, playback = 1, recording = 2)
-int new_track = 1;    //flag to tell if a track contains an existing recording or is "new" (default)
-unsigned long pedal_delay = 0;    //Variables to calculate length of Left pedal press
+int playback = 0;   //flag for current state of the selected track (stopped = 0, playback = 1)
+int new_track = 1;    //flag to tell if a track contains an existing recording or is "newly selected" (default)
+unsigned long pedal_delay = 0;    //Variables to calculate length of Right pedal press
 unsigned long last_delay = 0;
 int long_press = 1000;    //Delay threshold for the minimum duration of a "long press" in milliseconds
 
@@ -54,7 +57,7 @@ void loop() {
     //RIGHT PEDAL press
     if(record == 0) {   //Only accept Right Pedal presses if track is NOT recording
       if(digitalRead(pedal_right) == LOW && select == 0) {    //Right Pedal is pressed
-        select = 1;   //set flag that pedal has been pressed
+        select = 1;   //set flag that pedal has been pressed (prevents re-triggers within main loop)
         last_delay = millis();    //record time of pedal press
         Serial.println();
         Serial.println("RIGHT Pressed...");
@@ -70,7 +73,7 @@ void loop() {
           Serial.println("STOP Track");
           bleKeyboard.write(217);   //send ASCII code for "Down Arrow" to select next slot within same track
           delay(500);
-          new_track = 1;    //Since we are in a new slot within the old track, set "new_track" to 1 (TRUE)
+          new_track = 1;    //Since we are in a "new slot" within the same track, set "new_track" flag to 1 (TRUE)
           bleKeyboard.write(48);   //send ASCII code for numeric zero to toggle track to "play" mode
           delay(500);
           Serial.println("NEXT SLOT");
@@ -78,7 +81,7 @@ void loop() {
         else {    //otherwise if "short press"
           bleKeyboard.write(215);   //send ASCII code for "Right Arrow" key to select next track
           delay(500);
-          new_track = 1;    //set flag that we have switched to a new track
+          new_track = 1;    //set flag to show that we have switched to a new track
           playback = 0;
           Serial.println("NEXT TRACK");
         }
@@ -94,7 +97,7 @@ void loop() {
         bleKeyboard.write(KEY_RETURN);
         delay(1000);
         record = 1;   //set flag that recording is in progress
-        playback = 1;   //Set this flag to "true" while recording to prevent looping re-triggers if pedal held down.
+        playback = 1;   //Set this flag to "true" while recording to prevent main loop re-triggers if pedal held down.
         new_track = 0;    //set flag that the current track is no longer "new"
         Serial.println("RECORDING");
       }
@@ -121,11 +124,9 @@ void loop() {
     else if(digitalRead(pedal_left) == HIGH) {   //if pedal released at ANY time
       if(playback == 1) {   //Check if the flag has been set (record mode initiated)
         Serial.println("LEFT Released...");
-        playback = 0;   //Reset the "playback" flag when the pedal is released. Now recording can be stopped by a second press of the pedal.
+        playback = 0;   //Reset the "playback" flag when the pedal is released. Now the recording can be stopped by a second press of the pedal.
         delay(500);
       }
     }
-
-    
   }
 }
