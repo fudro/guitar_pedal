@@ -32,7 +32,7 @@ const int pedal_right = 5; //Select or Stop track(Retry)
 int select = 0;  //flag for state of right_pedal used to make track selections (pressed = 1, released = 0)
 int record = 0;  //flag for current state of selected track (recording = 1, not-recording = 0)
 int playback = 0;   //flag for current state of the selected track (stopped = 0, playback = 1)
-int new_track = 1;    //flag to tell if a track contains an existing recording or is "newly selected" (default)
+int new_track = 1;    //flag to tell if a track contains an existing recording or is "new" (default)
 unsigned long pedal_delay = 0;    //Variables to calculate length of Right pedal press
 unsigned long last_delay = 0;
 int long_press = 1000;    //Delay threshold for the minimum duration of a "long press" in milliseconds
@@ -44,8 +44,7 @@ void setup() {
     
   //define pedal pins
   pinMode(pedal_left, INPUT_PULLUP);    //pedal pin states are pulled high as their default state
-  pinMode(pedal_right, INPUT_PULLUP);    //Due to the special nature of pin 2 ("strapping pin" functionality as well as being connected to built-in LED)...
-                                  //...set this pin to INPUT and use an external pull up resistor.
+  pinMode(pedal_right, INPUT_PULLUP);    
   //Display feedback
   Serial.begin(115200);
   Serial.println("Starting BLE Guitar Pedal!");
