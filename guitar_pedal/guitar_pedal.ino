@@ -3,18 +3,21 @@
  * Using buttons connected to IO pins, the ESP32 can be triggered to send bluetooth keystroke messages to Ableton Live.
  * This program is intended to work within the "Session View" of Ableton.
  * 
+ * NOTE:
+ * To compile, be sure to set the board type to: Tools > Board > ESP32 Arduino > ESP32 Dev Module
+ * 
  * FUNCTIONALITY:
  * 
  * PRESS TYPE | LEFT PEDAL                    |  RIGHT PEDAL
  * --------------------------------------------------------
- *  Short     | Toggle: Record/Play/Restart   |  Next Track (Right Arrow)
- *  Long      | N/A                           |  Stop Slot/Retry (auto select next downward slot in same track)
+ *  Short     | Toggle: Record/Play/Restart   |  Next Track (Down Arrow - selects the slot directly below the currently playing slot - for layering/overdubbing)
+ *  Long      | N/A                           |  Stop Slot/Retry (stop the currently playing slot and select the slot directly below)
  *  
  *  NOTES: 
  *  "Record" only activates on first press within a newly selected track.
  *  "Play" activates upon second press within an existing track.
  *  "Restart" activates upon all subsequent presses within an existing track.
- *  "Next Track" will go to the track directly to the "right" of the current track (equivalent to Right Arrow).
+ *  "Next Track" will go to the slot directly below the currently playing slot (equivalent to Down Arrow).
  *  
  *  REFERENCE:
  *  Library:  https://github.com/T-vK/ESP32-BLE-Keyboard
@@ -75,14 +78,14 @@ void loop() {
           new_track = 1;    //Since we are in a "new slot" within the same track, set "new_track" flag to 1 (TRUE)
           bleKeyboard.write(48);   //send ASCII code for numeric zero to toggle track to "play" mode
           delay(500);
-          Serial.println("NEXT SLOT");
+          Serial.println("NEXT SLOT - REDO");
         }
         else {    //otherwise if "short press"
-          bleKeyboard.write(215);   //send ASCII code for "Right Arrow" key to select next track
+          bleKeyboard.write(217);   //send ASCII code for "Down Arrow" key to select next slot directly below the currently playing slot
           delay(500);
           new_track = 1;    //set flag to show that we have switched to a new track
           playback = 0;
-          Serial.println("NEXT TRACK");
+          Serial.println("NEXT SLOT - LAYERING");
         }
       }
     }
